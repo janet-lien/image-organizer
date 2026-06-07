@@ -92,10 +92,28 @@ button {
   font-weight: 700;
 }
 
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.segmented .selected {
+  border-color: #1f6feb;
+  color: #1f6feb;
+  background: #eef5ff;
+}
+
 .primary {
   background: #1f6feb;
   color: #ffffff;
   border-color: #1f6feb;
+}
+
+.error-message {
+  margin: 0;
+  color: #b42318;
+  font-size: 0.9rem;
+  font-weight: 700;
 }
 
 .metric-grid,
