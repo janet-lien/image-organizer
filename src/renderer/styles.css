@@ -1,0 +1,95 @@
+:root {
+  color: #172026;
+  background: #f7f8fb;
+  font-family:
+    Inter, "SF Pro Display", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
+    sans-serif;
+  font-synthesis: none;
+  line-height: 1.5;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+.app-shell {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 32px;
+}
+
+.workspace-panel {
+  width: min(720px, 100%);
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  color: #c7343a;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+h1 {
+  margin: 0;
+  color: #111827;
+  font-size: 2.5rem;
+  font-weight: 800;
+}
+
+.summary {
+  margin: 16px 0 24px;
+  color: #46515f;
+  font-size: 1.05rem;
+}
+
+.status-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  margin: 0;
+}
+
+.status-grid div {
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 16px;
+}
+
+.status-grid dt {
+  color: #657083;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.status-grid dd {
+  margin: 6px 0 0;
+  color: #172026;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+@media (max-width: 640px) {
+  .app-shell {
+    padding: 20px;
+  }
+
+  h1 {
+    font-size: 2rem;
+  }
+}
