@@ -1,6 +1,6 @@
-import { contextBridge } from "electron";
-import { APP_NAME } from "../shared/constants";
+import { contextBridge, ipcRenderer } from "electron";
+import type { AnalyzeRequest, AnalyzeResponse } from "../shared/ipcTypes";
 
-contextBridge.exposeInMainWorld("imageOrganizer", {
-  appName: APP_NAME
+contextBridge.exposeInMainWorld("xhsOrganizer", {
+  analyze: (request: AnalyzeRequest): Promise<AnalyzeResponse> => ipcRenderer.invoke("analyze", request)
 });

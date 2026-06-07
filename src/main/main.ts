@@ -1,6 +1,7 @@
 import { app, BrowserWindow } from "electron";
 import { join } from "node:path";
 import { APP_NAME } from "../shared/constants";
+import { registerIpcHandlers } from "./ipc";
 
 const createMainWindow = (): void => {
   const mainWindow = new BrowserWindow({
@@ -25,6 +26,7 @@ const createMainWindow = (): void => {
 };
 
 app.whenReady().then(() => {
+  registerIpcHandlers();
   createMainWindow();
 
   app.on("activate", () => {
