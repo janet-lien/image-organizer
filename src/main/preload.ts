@@ -1,8 +1,21 @@
 import { contextBridge, ipcRenderer } from "electron";
-import type { AnalyzeRequest, AnalyzeResponse, ExportReviewedRequest, ExportReviewedResponse } from "../shared/ipcTypes";
+import type {
+  AnalyzeRequest,
+  AnalyzeResponse,
+  ExportReviewedRequest,
+  ExportReviewedResponse,
+  PreviewFeishuMatchesRequest,
+  PreviewFeishuMatchesResponse,
+  UploadFeishuMatchesRequest,
+  UploadFeishuMatchesResponse
+} from "../shared/ipcTypes";
 
 contextBridge.exposeInMainWorld("xhsOrganizer", {
   analyze: (request: AnalyzeRequest): Promise<AnalyzeResponse> => ipcRenderer.invoke("analyze", request),
   exportReviewed: (request: ExportReviewedRequest): Promise<ExportReviewedResponse> =>
-    ipcRenderer.invoke("exportReviewed", request)
+    ipcRenderer.invoke("exportReviewed", request),
+  previewFeishuMatches: (request: PreviewFeishuMatchesRequest): Promise<PreviewFeishuMatchesResponse> =>
+    ipcRenderer.invoke("previewFeishuMatches", request),
+  uploadFeishuMatches: (request: UploadFeishuMatchesRequest): Promise<UploadFeishuMatchesResponse> =>
+    ipcRenderer.invoke("uploadFeishuMatches", request)
 });

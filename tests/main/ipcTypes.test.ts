@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import type { AnalyzeRequest, AnalyzeResponse, ExportReviewedRequest } from "../../src/shared/ipcTypes";
+import type {
+  AnalyzeRequest,
+  AnalyzeResponse,
+  ExportReviewedRequest,
+  PreviewFeishuMatchesRequest,
+  UploadFeishuMatchesRequest
+} from "../../src/shared/ipcTypes";
 
 describe("IPC contracts", () => {
   it("represents an analysis request", () => {
@@ -55,5 +61,37 @@ describe("IPC contracts", () => {
     };
 
     expect(request.folders[0].coverAssetId).toBe("a");
+  });
+
+  it("represents Feishu preview and upload requests", () => {
+    const config = {
+      tenantAccessToken: "tenant-token",
+      appToken: "app-token",
+      tableId: "tbl",
+      viewId: "view",
+      imageFieldName: "图片",
+      titleFieldName: "标题",
+      bodyFieldName: "正文",
+      uploadParentType: "bitable_image" as const
+    };
+    const previewRequest: PreviewFeishuMatchesRequest = {
+      config,
+      folderTitles: ["01"]
+    };
+    const uploadRequest: UploadFeishuMatchesRequest = {
+      config,
+      items: [
+        {
+          action: "upload",
+          existingTokens: [],
+          filePaths: ["/out/01/01_封面.jpg"],
+          folderTitle: "01",
+          recordId: "rec1"
+        }
+      ]
+    };
+
+    expect(previewRequest.folderTitles).toEqual(["01"]);
+    expect(uploadRequest.items[0].action).toBe("upload");
   });
 });

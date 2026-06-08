@@ -1,7 +1,14 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { App, buildAnalyzeRequest, buildExportRequest, setFolderCover } from "../../src/renderer/App";
-import type { AnalyzeResponse } from "../../src/shared/ipcTypes";
+import {
+  App,
+  buildAnalyzeRequest,
+  buildExportRequest,
+  buildFeishuPreviewRequest,
+  buildFeishuUploadRequest,
+  setFolderCover
+} from "../../src/renderer/App";
+import type { AnalyzeResponse, ExportReviewedResponse, PreviewFeishuMatchesResponse } from "../../src/shared/ipcTypes";
 import type { ImageAsset } from "../../src/shared/types";
 
 describe("App", () => {
@@ -108,7 +115,94 @@ describe("App", () => {
       outputDir: "/out"
     });
   });
+
+  it("renders Feishu upload after export completes", () => {
+    const html = renderToStaticMarkup(<App initialExportResult={exportResult()} initialResult={analysisResult()} />);
+
+    expect(html).toContain("飞书上传");
+    expect(html).toContain("预览匹配");
+    expect(html).toContain("开始上传");
+  });
+
+  it("builds Feishu preview and upload requests", () => {
+    const config = {
+      tenantAccessToken: "tenant-token",
+      appToken: "app-token",
+      tableId: "tbl",
+      viewId: "view",
+      imageFieldName: "图片",
+      titleFieldName: "标题",
+      bodyFieldName: "正文",
+      uploadParentType: "bitable_image" as const
+    };
+    const preview = buildFeishuPreviewRequest({
+      config,
+      folders: analysisResult().folders
+    });
+    const matches: PreviewFeishuMatchesResponse = {
+      matches: [
+        {
+          action: "upload",
+          existingImageTokens: [],
+          folderTitle: "01",
+          imageCount: 0,
+          recordId: "rec1",
+          title: "第一篇"
+        }
+      ],
+      skippedFolderCount: 0,
+      skippedRecordCount: 0
+    };
+
+    expect(preview.folderTitles).toEqual(["01"]);
+    expect(
+      buildFeishuUploadRequest({
+        actionOverrides: {},
+        config,
+        copiedFiles: exportResult().copiedFiles,
+        preview: matches
+      }).items[0]
+    ).toEqual({
+      action: "upload",
+      existingTokens: [],
+      filePaths: ["/out/01/01_封面.jpg"],
+      folderTitle: "01",
+      recordId: "rec1"
+    });
+  });
 });
+
+function analysisResult(): AnalyzeResponse {
+  return {
+    assets: [asset("a")],
+    estimate: {
+      imageCount: 1,
+      estimatedCostCny: { min: 0.01, max: 0.02 },
+      estimatedAnalysisMinutes: { min: 1, max: 2 },
+      requiresBudgetConfirmation: false
+    },
+    folders: [
+      {
+        id: "folder-01",
+        index: 1,
+        title: "01",
+        strategy: "by_scene",
+        targetCount: { min: 1, max: 8 },
+        assetIds: ["a"],
+        backupAssetIds: [],
+        lowQualityAssetIds: [],
+        reusedAssetIds: [],
+        coverAssetId: "a"
+      }
+    ]
+  };
+}
+
+function exportResult(): ExportReviewedResponse {
+  return {
+    copiedFiles: [{ sourcePath: "/photos/a.jpg", destinationPath: "/out/01/01_封面.jpg" }]
+  };
+}
 
 function asset(id: string): ImageAsset {
   return {
