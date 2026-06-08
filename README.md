@@ -25,3 +25,14 @@ Optional: set `OPENAI_VISION_MODEL` to override the default vision model.
 5. Review groups and choose one cover per folder.
 6. Copy output.
 7. Upload to Feishu Bitable when configured.
+
+## Feishu Upload
+
+Before previewing matches, fill in:
+
+- Tenant Access Token
+- App Token
+- Table ID
+- View ID
+- Image field name
+- Title field name

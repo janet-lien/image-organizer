@@ -300,6 +300,36 @@ describe("App", () => {
     expect(html).toContain("token expired");
   });
 
+  it("keeps Feishu preview disabled until required config is filled", () => {
+    const missingConfigHtml = renderToStaticMarkup(
+      <FeishuUploadPage
+        actionOverrides={{}}
+        config={{ ...feishuConfig(), tenantAccessToken: "" }}
+        isPreviewing={false}
+        isUploading={false}
+        onActionChange={() => undefined}
+        onConfigChange={() => undefined}
+        onPreview={() => undefined}
+        onUpload={() => undefined}
+      />
+    );
+    const readyConfigHtml = renderToStaticMarkup(
+      <FeishuUploadPage
+        actionOverrides={{}}
+        config={feishuConfig()}
+        isPreviewing={false}
+        isUploading={false}
+        onActionChange={() => undefined}
+        onConfigChange={() => undefined}
+        onPreview={() => undefined}
+        onUpload={() => undefined}
+      />
+    );
+
+    expect(missingConfigHtml).toContain('<button class="primary" disabled="" type="button">预览匹配</button>');
+    expect(readyConfigHtml).toContain('<button class="primary" type="button">预览匹配</button>');
+  });
+
   it("builds Feishu preview and upload requests", () => {
     const config = feishuConfig();
     const preview = buildFeishuPreviewRequest({
