@@ -24,4 +24,18 @@ describe("createFolderDrafts", () => {
 
     expect(result.map((folder) => folder.assetIds)).toEqual([["a1", "a2"], ["b1"]]);
   });
+
+  it("keeps all low-quality assets visible in a review folder", () => {
+    const lowQuality = asset("a1", "办公桌", "A");
+
+    const result = createFolderDrafts({
+      assets: [{ ...lowQuality, labels: { ...lowQuality.labels, quality: ["underexposed"] } }],
+      strategy: "by_variant",
+      targetCount: { min: 3, max: 5 }
+    });
+
+    expect(result).toHaveLength(1);
+    expect(result[0].assetIds).toEqual([]);
+    expect(result[0].lowQualityAssetIds).toEqual(["a1"]);
+  });
 });

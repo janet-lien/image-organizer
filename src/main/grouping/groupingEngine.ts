@@ -8,8 +8,9 @@ export function createFolderDrafts(input: {
   const usable = input.assets.filter((asset) => asset.labels.quality.length === 0);
   const lowQuality = input.assets.filter((asset) => asset.labels.quality.length > 0).map((asset) => asset.id);
   const groups = groupAssets(usable, input.strategy);
+  const reviewGroups = groups.length > 0 || lowQuality.length === 0 ? groups : [[]];
 
-  return groups.map((assets, index) => ({
+  return reviewGroups.map((assets, index) => ({
     id: `folder-${String(index + 1).padStart(2, "0")}`,
     index: index + 1,
     title: String(index + 1).padStart(2, "0"),
