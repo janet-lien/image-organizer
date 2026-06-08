@@ -2,11 +2,14 @@ import type { ImportFormState } from "../App";
 import type { GroupingStrategy } from "../../shared/types";
 
 interface ImportPageProps {
+  canAnalyze: boolean;
   error?: string;
   form: ImportFormState;
   isAnalyzing: boolean;
   onAnalyze: () => Promise<void>;
   onFormChange: (form: ImportFormState) => void;
+  onSelectOutputDir: () => void;
+  onSelectSourceDir: () => void;
 }
 
 const strategies: Array<{ label: string; value: GroupingStrategy }> = [
@@ -16,7 +19,16 @@ const strategies: Array<{ label: string; value: GroupingStrategy }> = [
   { label: "自定义", value: "custom" }
 ];
 
-export function ImportPage({ error, form, isAnalyzing, onAnalyze, onFormChange }: ImportPageProps): JSX.Element {
+export function ImportPage({
+  canAnalyze,
+  error,
+  form,
+  isAnalyzing,
+  onAnalyze,
+  onFormChange,
+  onSelectOutputDir,
+  onSelectSourceDir
+}: ImportPageProps): JSX.Element {
   const update = (patch: Partial<ImportFormState>): void => onFormChange({ ...form, ...patch });
 
   return (
@@ -32,20 +44,30 @@ export function ImportPage({ error, form, isAnalyzing, onAnalyze, onFormChange }
         }}
       >
         <label htmlFor="source-dir">源文件夹</label>
-        <input
-          id="source-dir"
-          onChange={(event) => update({ sourceDir: event.currentTarget.value })}
-          placeholder="/Users/jen/Desktop/photos"
-          value={form.sourceDir}
-        />
+        <div className="path-row">
+          <input
+            id="source-dir"
+            onChange={(event) => update({ sourceDir: event.currentTarget.value })}
+            placeholder="/Users/jen/Desktop/photos"
+            value={form.sourceDir}
+          />
+          <button onClick={onSelectSourceDir} type="button">
+            选择源文件夹
+          </button>
+        </div>
 
         <label htmlFor="output-dir">输出文件夹</label>
-        <input
-          id="output-dir"
-          onChange={(event) => update({ outputDir: event.currentTarget.value })}
-          placeholder="/Users/jen/Desktop/output"
-          value={form.outputDir}
-        />
+        <div className="path-row">
+          <input
+            id="output-dir"
+            onChange={(event) => update({ outputDir: event.currentTarget.value })}
+            placeholder="/Users/jen/Desktop/output"
+            value={form.outputDir}
+          />
+          <button onClick={onSelectOutputDir} type="button">
+            选择输出文件夹
+          </button>
+        </div>
 
         <label>成篇策略</label>
         <div className="segmented" role="group" aria-label="成篇策略">
@@ -80,7 +102,7 @@ export function ImportPage({ error, form, isAnalyzing, onAnalyze, onFormChange }
 
         {error ? <p className="error-message">{error}</p> : null}
 
-        <button className="primary" disabled={isAnalyzing} onClick={() => void onAnalyze()} type="button">
+        <button className="primary" disabled={!canAnalyze || isAnalyzing} onClick={() => void onAnalyze()} type="button">
           {isAnalyzing ? "分析中..." : "开始分析"}
         </button>
       </form>

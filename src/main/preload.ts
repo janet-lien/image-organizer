@@ -6,6 +6,8 @@ import type {
   ExportReviewedResponse,
   PreviewFeishuMatchesRequest,
   PreviewFeishuMatchesResponse,
+  SelectDirectoryRequest,
+  SelectDirectoryResponse,
   UploadFeishuMatchesRequest,
   UploadFeishuMatchesResponse
 } from "../shared/ipcTypes";
@@ -16,6 +18,8 @@ contextBridge.exposeInMainWorld("xhsOrganizer", {
     ipcRenderer.invoke("exportReviewed", request),
   previewFeishuMatches: (request: PreviewFeishuMatchesRequest): Promise<PreviewFeishuMatchesResponse> =>
     ipcRenderer.invoke("previewFeishuMatches", request),
+  selectDirectory: (request: SelectDirectoryRequest): Promise<SelectDirectoryResponse> =>
+    ipcRenderer.invoke("selectDirectory", request),
   uploadFeishuMatches: (request: UploadFeishuMatchesRequest): Promise<UploadFeishuMatchesResponse> =>
     ipcRenderer.invoke("uploadFeishuMatches", request)
 });

@@ -10,6 +10,12 @@ npm test
 npm run dev
 ```
 
+## Vision Analysis
+
+Set `OPENAI_API_KEY` to use the OpenAI vision analyzer. Without it, the app uses deterministic mock labels for offline development.
+
+Optional: set `OPENAI_VISION_MODEL` to override the default vision model.
+
 ## Workflow
 
 1. Select source and output folders.

@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { buildVisionRequest, parseVisionLabels } from "../../../src/main/vision/openaiVisionAnalyzer";
+import {
+  buildVisionRequest,
+  extractResponseOutputText,
+  parseVisionLabels
+} from "../../../src/main/vision/openaiVisionAnalyzer";
 
 describe("parseVisionLabels", () => {
   it("parses model JSON into image labels", () => {
@@ -16,6 +20,19 @@ describe("parseVisionLabels", () => {
     expect(labels.scene).toBe("办公桌");
   });
 
+  it("parses JSON wrapped in a markdown code block", () => {
+    const labels = parseVisionLabels(`\`\`\`json
+{
+  "scene": "窗边",
+  "roles": ["detail"],
+  "quality": []
+}
+\`\`\``);
+
+    expect(labels.scene).toBe("窗边");
+    expect(labels.roles).toEqual(["detail"]);
+  });
+
   it("builds a low-detail image request", () => {
     const request = buildVisionRequest({
       model: "gpt-5-mini",
@@ -28,5 +45,22 @@ describe("parseVisionLabels", () => {
       image_url: "data:image/jpeg;base64,abc",
       detail: "low"
     });
+  });
+
+  it("extracts text from a direct Responses API response", () => {
+    expect(
+      extractResponseOutputText({
+        output: [
+          {
+            content: [
+              {
+                type: "output_text",
+                text: "{\"scene\":\"办公桌\",\"roles\":[\"main_subject\"],\"quality\":[]}"
+              }
+            ]
+          }
+        ]
+      })
+    ).toContain("办公桌");
   });
 });

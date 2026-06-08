@@ -24,6 +24,14 @@ export interface ExportReviewedResponse {
   copiedFiles: Array<{ sourcePath: string; destinationPath: string }>;
 }
 
+export interface SelectDirectoryRequest {
+  title: string;
+}
+
+export interface SelectDirectoryResponse {
+  path?: string;
+}
+
 export interface FeishuUploadConfig {
   tenantAccessToken: string;
   appToken: string;

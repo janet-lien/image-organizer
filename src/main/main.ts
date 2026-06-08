@@ -2,6 +2,7 @@ import { app, BrowserWindow } from "electron";
 import { join } from "node:path";
 import { APP_NAME } from "../shared/constants";
 import { registerIpcHandlers } from "./ipc";
+import { resolvePreloadPath } from "./preloadPath";
 
 const createMainWindow = (): void => {
   const mainWindow = new BrowserWindow({
@@ -11,7 +12,7 @@ const createMainWindow = (): void => {
     minHeight: 640,
     title: APP_NAME,
     webPreferences: {
-      preload: join(__dirname, "../preload/index.js"),
+      preload: resolvePreloadPath(__dirname),
       sandbox: false,
       contextIsolation: true
     }

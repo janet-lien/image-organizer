@@ -4,6 +4,8 @@ import type {
   AnalyzeResponse,
   ExportReviewedRequest,
   PreviewFeishuMatchesRequest,
+  SelectDirectoryRequest,
+  SelectDirectoryResponse,
   UploadFeishuMatchesRequest
 } from "../../src/shared/ipcTypes";
 
@@ -93,5 +95,13 @@ describe("IPC contracts", () => {
 
     expect(previewRequest.folderTitles).toEqual(["01"]);
     expect(uploadRequest.items[0].action).toBe("upload");
+  });
+
+  it("represents directory selection results", () => {
+    const request: SelectDirectoryRequest = { title: "选择源文件夹" };
+    const response: SelectDirectoryResponse = { path: "/photos" };
+
+    expect(request.title).toBe("选择源文件夹");
+    expect(response.path).toBe("/photos");
   });
 });

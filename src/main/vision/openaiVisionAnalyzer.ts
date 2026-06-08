@@ -22,7 +22,7 @@ const qualityIssues: QualityIssue[] = [
 ];
 
 export function parseVisionLabels(raw: string): ImageLabels {
-  const parsed = JSON.parse(raw) as Partial<ImageLabels>;
+  const parsed = JSON.parse(extractJsonObject(raw)) as Partial<ImageLabels>;
   return {
     scene: typeof parsed.scene === "string" ? parsed.scene : undefined,
     productVariant: typeof parsed.productVariant === "string" ? parsed.productVariant : undefined,
@@ -35,6 +35,21 @@ export function parseVisionLabels(raw: string): ImageLabels {
     confidence: typeof parsed.confidence === "number" ? parsed.confidence : 0,
     explanation: typeof parsed.explanation === "string" ? parsed.explanation : ""
   };
+}
+
+function extractJsonObject(raw: string): string {
+  const trimmed = raw.trim();
+  if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+    return trimmed;
+  }
+
+  const start = trimmed.indexOf("{");
+  const end = trimmed.lastIndexOf("}");
+  if (start >= 0 && end > start) {
+    return trimmed.slice(start, end + 1);
+  }
+
+  return trimmed;
 }
 
 export function buildVisionRequest(input: { model: string; dataUrl: string; filename: string }) {
@@ -61,6 +76,35 @@ export function buildVisionRequest(input: { model: string; dataUrl: string; file
       }
     ]
   };
+}
+
+export function extractResponseOutputText(responseJson: unknown): string {
+  if (!responseJson || typeof responseJson !== "object") {
+    return "";
+  }
+
+  const directText = (responseJson as { output_text?: unknown }).output_text;
+  if (typeof directText === "string") {
+    return directText;
+  }
+
+  const output = (responseJson as { output?: unknown }).output;
+  if (!Array.isArray(output)) {
+    return "";
+  }
+
+  return output
+    .flatMap((item) => (isObject(item) && Array.isArray(item.content) ? item.content : []))
+    .map((content) => {
+      if (!isObject(content)) {
+        return "";
+      }
+      const type = typeof content.type === "string" ? content.type : "";
+      const text = typeof content.text === "string" ? content.text : "";
+      return type === "output_text" || type === "text" ? text : "";
+    })
+    .filter(Boolean)
+    .join("\n");
 }
 
 export class OpenAIVisionAnalyzer implements VisionAnalyzer {
@@ -95,12 +139,16 @@ export class OpenAIVisionAnalyzer implements VisionAnalyzer {
         throw new Error(`OpenAI vision request failed: ${response.status} ${await response.text()}`);
       }
 
-      const json = (await response.json()) as { output_text?: string };
-      entries.push([asset.id, parseVisionLabels(json.output_text ?? "{}")]);
+      const json = await response.json();
+      entries.push([asset.id, parseVisionLabels(extractResponseOutputText(json) || "{}")]);
     }
 
     return Object.fromEntries(entries);
   }
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object";
 }
 
 async function toJpegDataUrl(path: string): Promise<string> {

@@ -9,6 +9,7 @@ interface FeishuUploadPageProps {
   actionOverrides: Record<string, FeishuUploadAction>;
   config: FeishuUploadConfig;
   error?: string;
+  failedRecords?: Array<{ recordId: string; reason: string }>;
   isPreviewing: boolean;
   isUploading: boolean;
   message?: string;
@@ -23,6 +24,7 @@ export function FeishuUploadPage({
   actionOverrides,
   config,
   error,
+  failedRecords = [],
   isPreviewing,
   isUploading,
   message,
@@ -92,6 +94,21 @@ export function FeishuUploadPage({
 
       {error ? <p className="error-message">{error}</p> : null}
       {message ? <p className="success-message">{message}</p> : null}
+      {failedRecords.length > 0 ? (
+        <section className="failure-panel" aria-label="上传失败">
+          <h2>上传失败</h2>
+          <div className="match-list">
+            {failedRecords.map((record) => (
+              <article className="match-row" key={record.recordId}>
+                <div>
+                  <strong>{record.recordId}</strong>
+                  <span>{record.reason}</span>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {preview ? (
         <section className="match-panel" aria-label="飞书匹配">

@@ -1,4 +1,4 @@
-import { ipcMain } from "electron";
+import { dialog, ipcMain } from "electron";
 import type {
   AnalyzeRequest,
   AnalyzeResponse,
@@ -6,31 +6,28 @@ import type {
   ExportReviewedResponse,
   PreviewFeishuMatchesRequest,
   PreviewFeishuMatchesResponse,
+  SelectDirectoryRequest,
+  SelectDirectoryResponse,
   UploadFeishuMatchesRequest,
   UploadFeishuMatchesResponse
 } from "../shared/ipcTypes";
 import { exportReviewedFolders } from "./export/exporter";
 import { FeishuClient } from "./feishu/feishuClient";
 import { mapFoldersToRecords } from "./feishu/feishuMapper";
-import { scanImageDirectory } from "./files/fileScanner";
-import { createFolderDrafts } from "./grouping/groupingEngine";
-import { estimateBatchAnalysis } from "./vision/costEstimator";
-import { MockVisionAnalyzer } from "./vision/mockVisionAnalyzer";
+import { analyzeImageDirectory } from "./workflow/analyzeWorkflow";
 
 export function registerIpcHandlers(): void {
-  ipcMain.handle("analyze", async (_event, request: AnalyzeRequest): Promise<AnalyzeResponse> => {
-    const assets = await scanImageDirectory(request.sourceDir);
-    const estimate = estimateBatchAnalysis({ imageCount: assets.length, budgetCny: request.budgetCny });
-    const analyzer = new MockVisionAnalyzer();
-    const labels = await analyzer.analyzeBatch(assets);
-    const analyzed = assets.map((asset) => ({ ...asset, labels: labels[asset.id] ?? asset.labels }));
-    const folders = createFolderDrafts({
-      assets: analyzed,
-      strategy: request.strategy,
-      targetCount: request.targetCount
+  ipcMain.handle("selectDirectory", async (_event, request: SelectDirectoryRequest): Promise<SelectDirectoryResponse> => {
+    const result = await dialog.showOpenDialog({
+      properties: ["openDirectory"],
+      title: request.title
     });
 
-    return { assets: analyzed, estimate, folders };
+    return { path: result.canceled ? undefined : result.filePaths[0] };
+  });
+
+  ipcMain.handle("analyze", async (_event, request: AnalyzeRequest): Promise<AnalyzeResponse> => {
+    return analyzeImageDirectory(request);
   });
 
   ipcMain.handle("exportReviewed", async (_event, request: ExportReviewedRequest): Promise<ExportReviewedResponse> => {

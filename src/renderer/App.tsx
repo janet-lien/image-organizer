@@ -8,6 +8,8 @@ import type {
   FeishuUploadConfig,
   PreviewFeishuMatchesRequest,
   PreviewFeishuMatchesResponse,
+  SelectDirectoryRequest,
+  SelectDirectoryResponse,
   UploadFeishuMatchesRequest,
   UploadFeishuMatchesResponse
 } from "../shared/ipcTypes";
@@ -29,8 +31,12 @@ export interface OrganizerApi {
   analyze: (request: AnalyzeRequest) => Promise<AnalyzeResponse>;
   exportReviewed: (request: ExportReviewedRequest) => Promise<ExportReviewedResponse>;
   previewFeishuMatches: (request: PreviewFeishuMatchesRequest) => Promise<PreviewFeishuMatchesResponse>;
+  selectDirectory: (request: SelectDirectoryRequest) => Promise<SelectDirectoryResponse>;
   uploadFeishuMatches: (request: UploadFeishuMatchesRequest) => Promise<UploadFeishuMatchesResponse>;
 }
+
+type DirectoryField = "sourceDir" | "outputDir";
+type MoveDirection = "previous" | "next";
 
 interface AppProps {
   initialExportResult?: ExportReviewedResponse;
@@ -70,6 +76,7 @@ export const App = ({ initialExportResult, initialResult, organizerApi }: AppPro
   const [folders, setFolders] = useState<NoteFolderDraft[] | undefined>(initialResult?.folders);
   const [feishuConfig, setFeishuConfig] = useState<FeishuUploadConfig>(defaultFeishuConfig);
   const [feishuPreview, setFeishuPreview] = useState<PreviewFeishuMatchesResponse | undefined>();
+  const [feishuFailedRecords, setFeishuFailedRecords] = useState<Array<{ recordId: string; reason: string }>>([]);
   const [feishuActions, setFeishuActions] = useState<Record<string, FeishuUploadAction>>({});
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -80,6 +87,11 @@ export const App = ({ initialExportResult, initialResult, organizerApi }: AppPro
   const [feishuMessage, setFeishuMessage] = useState<string | undefined>();
 
   const handleAnalyze = async (): Promise<void> => {
+    if (!canAnalyzeImportForm(form)) {
+      setError("请选择源文件夹和输出文件夹");
+      return;
+    }
+
     const api = organizerApi ?? (typeof window !== "undefined" ? window.xhsOrganizer : undefined);
     if (!api) {
       setError("分析服务还没有准备好");
@@ -96,6 +108,23 @@ export const App = ({ initialExportResult, initialResult, organizerApi }: AppPro
       setError(unknownError instanceof Error ? unknownError.message : "分析失败");
     } finally {
       setIsAnalyzing(false);
+    }
+  };
+
+  const handleSelectDirectory = async (field: DirectoryField): Promise<void> => {
+    const api = organizerApi ?? (typeof window !== "undefined" ? window.xhsOrganizer : undefined);
+    if (!api) {
+      setError("文件夹选择服务还没有准备好");
+      return;
+    }
+
+    try {
+      const response = await api.selectDirectory({
+        title: field === "sourceDir" ? "选择源文件夹" : "选择输出文件夹"
+      });
+      setForm((currentForm) => applySelectedDirectory(currentForm, field, response.path));
+    } catch (unknownError) {
+      setError(unknownError instanceof Error ? unknownError.message : "选择文件夹失败");
     }
   };
 
@@ -127,6 +156,7 @@ export const App = ({ initialExportResult, initialResult, organizerApi }: AppPro
 
     setIsPreviewingFeishu(true);
     setError(undefined);
+    setFeishuFailedRecords([]);
     setFeishuMessage(undefined);
     try {
       const response = await api.previewFeishuMatches(
@@ -152,6 +182,7 @@ export const App = ({ initialExportResult, initialResult, organizerApi }: AppPro
 
     setIsUploadingFeishu(true);
     setError(undefined);
+    setFeishuFailedRecords([]);
     setFeishuMessage(undefined);
     try {
       const response = await api.uploadFeishuMatches(
@@ -162,6 +193,7 @@ export const App = ({ initialExportResult, initialResult, organizerApi }: AppPro
           preview: feishuPreview
         })
       );
+      setFeishuFailedRecords(response.failedRecords);
       setFeishuMessage(
         `已上传 ${response.uploadedRecordCount} 条，跳过 ${response.skippedRecordCount} 条，失败 ${response.failedRecords.length} 条`
       );
@@ -180,6 +212,7 @@ export const App = ({ initialExportResult, initialResult, organizerApi }: AppPro
           actionOverrides={feishuActions}
           config={feishuConfig}
           error={error}
+          failedRecords={feishuFailedRecords}
           isPreviewing={isPreviewingFeishu}
           isUploading={isUploadingFeishu}
           message={feishuMessage}
@@ -199,8 +232,22 @@ export const App = ({ initialExportResult, initialResult, organizerApi }: AppPro
         folders={reviewedFolders}
         isExporting={isExporting}
         onExport={() => void handleExport(result.assets, reviewedFolders)}
+        onMarkLowQuality={(folderId, assetId) => {
+          setFolders((currentFolders) => markAssetLowQuality(currentFolders ?? reviewedFolders, folderId, assetId));
+          setExportMessage(undefined);
+        }}
+        onMoveAsset={(folderId, assetId, direction) => {
+          setFolders((currentFolders) =>
+            moveAssetToAdjacentFolder(currentFolders ?? reviewedFolders, folderId, assetId, direction)
+          );
+          setExportMessage(undefined);
+        }}
+        onRestoreLowQuality={(folderId, assetId) => {
+          setFolders((currentFolders) => restoreLowQualityAsset(currentFolders ?? reviewedFolders, folderId, assetId));
+          setExportMessage(undefined);
+        }}
         onSelectCover={(folderId, assetId) => {
-          setFolders(setFolderCover(reviewedFolders, folderId, assetId));
+          setFolders((currentFolders) => setFolderCover(currentFolders ?? reviewedFolders, folderId, assetId));
           setExportMessage(undefined);
         }}
         result={result}
@@ -210,11 +257,14 @@ export const App = ({ initialExportResult, initialResult, organizerApi }: AppPro
 
   return (
     <ImportPage
+      canAnalyze={canAnalyzeImportForm(form)}
       error={error}
       form={form}
       isAnalyzing={isAnalyzing}
       onAnalyze={handleAnalyze}
       onFormChange={setForm}
+      onSelectOutputDir={() => void handleSelectDirectory("outputDir")}
+      onSelectSourceDir={() => void handleSelectDirectory("sourceDir")}
     />
   );
 };
@@ -268,6 +318,94 @@ export function setFolderCover(
   );
 }
 
+export function moveAssetToAdjacentFolder(
+  folders: NoteFolderDraft[],
+  folderId: string,
+  assetId: string,
+  direction: MoveDirection
+): NoteFolderDraft[] {
+  const sourceIndex = folders.findIndex((folder) => folder.id === folderId);
+  const targetIndex = direction === "previous" ? sourceIndex - 1 : sourceIndex + 1;
+  const source = folders[sourceIndex];
+
+  if (!source || targetIndex < 0 || targetIndex >= folders.length || !source.assetIds.includes(assetId)) {
+    return folders;
+  }
+
+  return folders.map((folder, index) => {
+    if (index === sourceIndex) {
+      return {
+        ...folder,
+        assetIds: withoutAsset(folder.assetIds, assetId),
+        coverAssetId: folder.coverAssetId === assetId ? undefined : folder.coverAssetId
+      };
+    }
+
+    if (index === targetIndex) {
+      return {
+        ...folder,
+        assetIds: appendAsset(folder.assetIds, assetId),
+        lowQualityAssetIds: withoutAsset(folder.lowQualityAssetIds, assetId)
+      };
+    }
+
+    return folder;
+  });
+}
+
+export function markAssetLowQuality(
+  folders: NoteFolderDraft[],
+  folderId: string,
+  assetId: string
+): NoteFolderDraft[] {
+  return folders.map((folder) => {
+    if (folder.id !== folderId || !folder.assetIds.includes(assetId)) {
+      return folder;
+    }
+
+    return {
+      ...folder,
+      assetIds: withoutAsset(folder.assetIds, assetId),
+      coverAssetId: folder.coverAssetId === assetId ? undefined : folder.coverAssetId,
+      lowQualityAssetIds: appendAsset(folder.lowQualityAssetIds, assetId)
+    };
+  });
+}
+
+export function restoreLowQualityAsset(
+  folders: NoteFolderDraft[],
+  folderId: string,
+  assetId: string
+): NoteFolderDraft[] {
+  return folders.map((folder) => {
+    if (folder.id !== folderId || !folder.lowQualityAssetIds.includes(assetId)) {
+      return folder;
+    }
+
+    return {
+      ...folder,
+      assetIds: appendAsset(folder.assetIds, assetId),
+      lowQualityAssetIds: withoutAsset(folder.lowQualityAssetIds, assetId)
+    };
+  });
+}
+
+export function applySelectedDirectory(
+  form: ImportFormState,
+  field: DirectoryField,
+  path: string | undefined
+): ImportFormState {
+  return path ? { ...form, [field]: path } : form;
+}
+
+function appendAsset(assetIds: string[], assetId: string): string[] {
+  return assetIds.includes(assetId) ? assetIds : [...assetIds, assetId];
+}
+
+function withoutAsset(assetIds: string[], assetId: string): string[] {
+  return assetIds.filter((id) => id !== assetId);
+}
+
 export function buildExportRequest(input: {
   assets: ImageAsset[];
   folders: NoteFolderDraft[];
@@ -286,14 +424,18 @@ export function buildAnalyzeRequest(form: ImportFormState): AnalyzeRequest {
     outputDir: form.outputDir.trim(),
     strategy: form.strategy,
     targetCount: parseTargetCount(form.targetCountText),
-    budgetCny: Number.parseFloat(form.budgetCnyText) || 0
+    budgetCny: Math.max(0, Number.parseFloat(form.budgetCnyText) || 0)
   };
+}
+
+export function canAnalyzeImportForm(form: ImportFormState): boolean {
+  return form.sourceDir.trim().length > 0 && form.outputDir.trim().length > 0;
 }
 
 function parseTargetCount(value: string): { min: number; max: number } {
   const [rawMin, rawMax] = value.split("-").map((part) => Number.parseInt(part.trim(), 10));
-  const min = Number.isFinite(rawMin) ? rawMin : 1;
-  const max = Number.isFinite(rawMax) ? rawMax : min;
+  const min = Math.max(1, Number.isFinite(rawMin) ? rawMin : 1);
+  const max = Math.max(1, Number.isFinite(rawMax) ? rawMax : min);
   return { min, max: Math.max(min, max) };
 }
 
