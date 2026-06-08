@@ -35,6 +35,7 @@ export function FeishuUploadPage({
   preview
 }: FeishuUploadPageProps): JSX.Element {
   const update = (patch: Partial<FeishuUploadConfig>): void => onConfigChange({ ...config, ...patch });
+  const canPreview = canPreviewFeishuMatches(config);
 
   return (
     <main className="page">
@@ -87,7 +88,7 @@ export function FeishuUploadPage({
           <option value="bitable_file">多维表格文件</option>
         </select>
 
-        <button className="primary" disabled={isPreviewing} onClick={onPreview} type="button">
+        <button className="primary" disabled={!canPreview || isPreviewing} onClick={onPreview} type="button">
           {isPreviewing ? "读取中..." : "预览匹配"}
         </button>
       </section>
@@ -180,4 +181,15 @@ function MatchRow({
 
 export function defaultFeishuAction(match: FeishuMatchPreview): FeishuUploadAction {
   return match.action === "upload" ? "upload" : "skip";
+}
+
+export function canPreviewFeishuMatches(config: FeishuUploadConfig): boolean {
+  return [
+    config.tenantAccessToken,
+    config.appToken,
+    config.tableId,
+    config.viewId,
+    config.imageFieldName,
+    config.titleFieldName
+  ].every((value) => value.trim().length > 0);
 }
