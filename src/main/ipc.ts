@@ -1,5 +1,6 @@
 import { ipcMain } from "electron";
-import type { AnalyzeRequest, AnalyzeResponse } from "../shared/ipcTypes";
+import type { AnalyzeRequest, AnalyzeResponse, ExportReviewedRequest, ExportReviewedResponse } from "../shared/ipcTypes";
+import { exportReviewedFolders } from "./export/exporter";
 import { scanImageDirectory } from "./files/fileScanner";
 import { createFolderDrafts } from "./grouping/groupingEngine";
 import { estimateBatchAnalysis } from "./vision/costEstimator";
@@ -18,6 +19,10 @@ export function registerIpcHandlers(): void {
       targetCount: request.targetCount
     });
 
-    return { estimate, folders };
+    return { assets: analyzed, estimate, folders };
+  });
+
+  ipcMain.handle("exportReviewed", async (_event, request: ExportReviewedRequest): Promise<ExportReviewedResponse> => {
+    return exportReviewedFolders(request);
   });
 }

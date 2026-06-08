@@ -33,6 +33,10 @@ select {
 }
 
 .toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   margin-bottom: 16px;
 }
 
@@ -116,6 +120,13 @@ button:disabled {
   font-weight: 700;
 }
 
+.success-message {
+  margin: 0 0 16px;
+  color: #087443;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
 .metric-grid,
 .folder-grid {
   display: grid;
@@ -164,6 +175,27 @@ button:disabled {
 .folder-card span {
   color: #1f6feb;
   font-weight: 700;
+}
+
+.asset-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.asset-row {
+  display: grid;
+  align-items: center;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.asset-row span {
+  min-width: 0;
+  overflow: hidden;
+  color: #405064;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 @media (max-width: 640px) {

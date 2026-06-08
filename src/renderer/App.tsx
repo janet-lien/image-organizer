@@ -1,6 +1,6 @@
 import { useState } from "react";
-import type { AnalyzeRequest, AnalyzeResponse } from "../shared/ipcTypes";
-import type { GroupingStrategy } from "../shared/types";
+import type { AnalyzeRequest, AnalyzeResponse, ExportReviewedRequest, ExportReviewedResponse } from "../shared/ipcTypes";
+import type { GroupingStrategy, ImageAsset, NoteFolderDraft } from "../shared/types";
 import { ImportPage } from "./pages/ImportPage";
 import { ReviewPage } from "./pages/ReviewPage";
 import "./styles.css";
@@ -15,6 +15,7 @@ export interface ImportFormState {
 
 export interface OrganizerApi {
   analyze: (request: AnalyzeRequest) => Promise<AnalyzeResponse>;
+  exportReviewed: (request: ExportReviewedRequest) => Promise<ExportReviewedResponse>;
 }
 
 interface AppProps {
@@ -39,8 +40,11 @@ const defaultForm: ImportFormState = {
 export const App = ({ initialResult, organizerApi }: AppProps): JSX.Element => {
   const [form, setForm] = useState<ImportFormState>(defaultForm);
   const [result, setResult] = useState<AnalyzeResponse | undefined>(initialResult);
+  const [folders, setFolders] = useState<NoteFolderDraft[] | undefined>(initialResult?.folders);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [error, setError] = useState<string | undefined>();
+  const [exportMessage, setExportMessage] = useState<string | undefined>();
 
   const handleAnalyze = async (): Promise<void> => {
     const api = organizerApi ?? (typeof window !== "undefined" ? window.xhsOrganizer : undefined);
@@ -52,7 +56,9 @@ export const App = ({ initialResult, organizerApi }: AppProps): JSX.Element => {
     setIsAnalyzing(true);
     setError(undefined);
     try {
-      setResult(await api.analyze(buildAnalyzeRequest(form)));
+      const response = await api.analyze(buildAnalyzeRequest(form));
+      setResult(response);
+      setFolders(response.folders);
     } catch (unknownError) {
       setError(unknownError instanceof Error ? unknownError.message : "分析失败");
     } finally {
@@ -60,8 +66,40 @@ export const App = ({ initialResult, organizerApi }: AppProps): JSX.Element => {
     }
   };
 
+  const handleExport = async (assets: ImageAsset[], reviewedFolders: NoteFolderDraft[]): Promise<void> => {
+    const api = organizerApi ?? (typeof window !== "undefined" ? window.xhsOrganizer : undefined);
+    setIsExporting(true);
+    setError(undefined);
+    setExportMessage(undefined);
+    try {
+      const response = await handleExportAssets(
+        api,
+        buildExportRequest({ assets, folders: reviewedFolders, outputDir: form.outputDir })
+      );
+      setExportMessage(`已复制 ${response.copiedFiles.length} 个文件`);
+    } catch (unknownError) {
+      setError(unknownError instanceof Error ? unknownError.message : "复制输出失败");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   if (result) {
-    return <ReviewPage result={result} />;
+    const reviewedFolders = folders ?? result.folders;
+    return (
+      <ReviewPage
+        error={error}
+        exportMessage={exportMessage}
+        folders={reviewedFolders}
+        isExporting={isExporting}
+        onExport={() => void handleExport(result.assets, reviewedFolders)}
+        onSelectCover={(folderId, assetId) => {
+          setFolders(setFolderCover(reviewedFolders, folderId, assetId));
+          setExportMessage(undefined);
+        }}
+        result={result}
+      />
+    );
   }
 
   return (
@@ -74,6 +112,38 @@ export const App = ({ initialResult, organizerApi }: AppProps): JSX.Element => {
     />
   );
 };
+
+async function handleExportAssets(
+  api: OrganizerApi | undefined,
+  request: ExportReviewedRequest
+): Promise<ExportReviewedResponse> {
+  if (!api) {
+    throw new Error("导出服务还没有准备好");
+  }
+  return api.exportReviewed(request);
+}
+
+export function setFolderCover(
+  folders: NoteFolderDraft[],
+  folderId: string,
+  assetId: string
+): NoteFolderDraft[] {
+  return folders.map((folder) =>
+    folder.id === folderId && folder.assetIds.includes(assetId) ? { ...folder, coverAssetId: assetId } : folder
+  );
+}
+
+export function buildExportRequest(input: {
+  assets: ImageAsset[];
+  folders: NoteFolderDraft[];
+  outputDir: string;
+}): ExportReviewedRequest {
+  return {
+    assets: input.assets,
+    folders: input.folders,
+    outputDir: input.outputDir.trim()
+  };
+}
 
 export function buildAnalyzeRequest(form: ImportFormState): AnalyzeRequest {
   return {
